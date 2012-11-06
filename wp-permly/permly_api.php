@@ -25,7 +25,7 @@ class permly_api {
 	 *
 	 */	
 	function permly_api(){
-		$this->url = $this->api_server_protocol."://".$this->api_server."/?remote_service=rs_external_api&key=".$this->api_key."&interface=eai_permly&version=".$this->api_version;
+		$this->url = $this->api_server_protocol."://".$this->api_server."/?remote_service=rs_external_api&key=1&interface=eai_permly&version=".$this->api_version;
 	}
 
 	/**
@@ -48,6 +48,10 @@ class permly_api {
 		if(!is_array($postdata) ) $postdata = array();
 		
 		$url = $this->_build_url();
+		
+		if(!isset($postdata['ip_address'])) $postdata['ip_address'] = $this->_get_client_ip();
+		if(!isset($postdata['user_agent'])) $postdata['user_agent'] = $this->_get_client_user_agent();
+		$postdata['api_key'] = $this->api_key;
 
 		$ch = curl_init($url);
 
@@ -63,13 +67,40 @@ class permly_api {
 
 		return $return_data;
 	}	
+	
+	/**
+	 * Return Client IP.
+	 *
+	 * @return	string
+	 */
+	function _get_client_ip() {
+		if(isset($_SERVER['REMOTE_ADDR'])) {
+			return $_SERVER['REMOTE_ADDR'];
+		} elseif(isset($_SERVER['HTTP_FROM'])) {
+			return $_SERVER['HTTP_FROM'];
+		} elseif(isset($_SERVER['HTTP_CLIENT_IP'])) {
+			return $_SERVER['HTTP_CLIENT_IP'];
+		} elseif(isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+			return $_SERVER['HTTP_X_FORWARDED_FOR'];
+		}
+		return '';
+	}
+
+	/**
+	 * Return Client User Agent.
+	 *
+	 * @return	string
+	 */
+	function _get_client_user_agent() {
+		return isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
+	}	
 		
 	/**
 	 * Encoded array in json data
 	 * 
 	 * @return	string
 	 */
-	function _json_encode($data, $options = 0) {
+	function _json_encode($data) {
 		return json_encode($data);
 		return json_encode($data, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
 	}
@@ -225,7 +256,7 @@ class permly_api {
 					$this->action = 'validate_url_key';
 					$postdata = array();
 					$postdata['data']['url_key'] = $url_key;
-					$result =  $this->send_request($postdata);
+					$result =  $this->_json_decode($this->send_request($postdata),true);
 
 					if(!isset($result['Error'])) $found = true;
 
